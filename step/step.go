@@ -106,6 +106,7 @@ type Inputs struct {
 	APIKeyIssuerID                  string          `env:"api_key_issuer_id"`
 	BuildURL                        string          `env:"BITRISE_BUILD_URL"`
 	BuildAPIToken                   stepconf.Secret `env:"BITRISE_BUILD_API_TOKEN"`
+	MaxRetryCount             	    int             `env:"max_retry_count"`
 }
 
 // Config ...

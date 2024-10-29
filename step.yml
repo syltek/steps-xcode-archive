@@ -390,6 +390,16 @@ inputs:
       If not specified, the Product Name (`PRODUCT_NAME`) Build settings value will be used.
       If Product Name is not specified, the Scheme will be used.
 
+- max_retry_count: "3"
+  opts:
+    title: "Maximum archive retry count"
+    summary: "Maximum number of times to retry the archive operation if it fails"
+    description: |
+      If the archive operation fails, the step will retry up to this many times.
+      Each retry attempt will perform a clean build.
+      Minimum value is 1.
+    is_required: true
+
 # Caching
 
 - cache_level: swift_packages
@@ -448,6 +458,7 @@ inputs:
       This input only takes effect if the other two connection override inputs are set too (`api_key_path`, `api_key_id`).
     is_required: false
 
+
 # Debugging
 
 - verbose_log: "no"
@@ -459,6 +470,7 @@ inputs:
     - "yes"
     - "no"
     is_required: true
+
 
 outputs:
 - BITRISE_IPA_PATH:

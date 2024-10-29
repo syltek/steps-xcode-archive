@@ -43,11 +43,35 @@ func run() int {
 		}
 	}
 
+	maxRetries := config.MaxRetryCount
+	if maxRetries < 1 {
+		maxRetries = 1
+	}
+	
+	var result step.RunResult
+	var runErr error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			logger.Infof("Archive attempt %d of %d", attempt, maxRetries)
+			// Force clean build for retry attempts
+			config.PerformCleanAction = true
+		}
+
+		runOpts := createRunOptions(config)
+		result, runErr = archiver.Run(runOpts)
+		if runErr == nil {
+			break
+		}
+
+		if attempt < maxRetries {
+			logger.Warnf("Archive failed, will retry: %s", runErr)
+		}
+	}
+
 	exitCode := 0
-	runOpts := createRunOptions(config)
-	result, err := archiver.Run(runOpts)
-	if err != nil {
-		logger.Errorf(formattedError(fmt.Errorf("Failed to execute Step main logic: %w", err)))
+	if runErr != nil {
+		logger.Errorf(formattedError(fmt.Errorf("Failed to execute Step main logic after %d attempts: %w", maxRetries, runErr)))
 		exitCode = 1
 		// don't return as step outputs needs to be exported even in case of failure (for example the xcodebuild logs)
 	}
