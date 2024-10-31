@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/v2/command"
 	"github.com/bitrise-io/go-utils/v2/env"
@@ -21,7 +24,6 @@ func main() {
 func run() int {
 	logger := log.NewLogger()
 	archiver := createXcodebuildArchiver(logger)
-
 	config, err := archiver.ProcessInputs()
 	if err != nil {
 		logger.Errorf(formattedError(fmt.Errorf("Failed to process Step inputs: %w", err)))
@@ -54,8 +56,42 @@ func run() int {
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		if attempt > 1 {
 			logger.Infof("Archive attempt %d of %d", attempt, maxRetries)
-			// Force clean build for retry attempts
-			config.PerformCleanAction = true
+			// Perform explicit clean and disable cache
+			cleanArgs := []string{"clean"}
+			if strings.HasSuffix(config.ProjectPath, ".xcworkspace") {
+				cleanArgs = append(cleanArgs, "-workspace", config.ProjectPath)
+			} else {
+				cleanArgs = append(cleanArgs, "-project", config.ProjectPath)
+			}
+			cleanArgs = append(cleanArgs, "-scheme", config.Scheme)
+			
+			cleanCmd := exec.Command("xcodebuild", cleanArgs...)
+			logger.Infof("Performing clean: %s", cleanCmd.String())
+			if output, err := cleanCmd.CombinedOutput(); err != nil {
+				logger.Warnf("Failed to clean project: %s", err)
+				logger.Warnf("Clean command output: %s", string(output))
+			}
+			// Clear Xcode caches and derived data
+			cmd := exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), "Library/Caches/com.apple.dt.Xcode"))
+			logger.Infof("Cleaning xcode cache: %s", cmd.String())
+			if output, err := cmd.CombinedOutput(); err != nil {
+				logger.Warnf("Failed to clear Xcode caches: %s", err)
+				logger.Warnf("Xcode cache command output: %s", string(output))
+			}			
+			cmd = exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), "Library/Caches/org.swift.swiftpm"))
+			logger.Infof("Cleaning Swift Package Manager cache: %s", cmd.String())
+			if output, err := cmd.CombinedOutput(); err != nil {
+				logger.Warnf("Failed to clear Swift Package Manager cache: %s", err)
+				logger.Warnf("Swift Package Manager cache command output: %s", string(output))
+			}			
+			cmd = exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), "Library/Developer/Xcode/DerivedData/*"))
+			logger.Infof("Cleaning derived data: %s", cmd.String())
+			if output, err := cmd.CombinedOutput(); err != nil {
+				logger.Warnf("Failed to clear derived data: %s", err)
+				logger.Warnf("Derived data command output: %s", string(output))
+			}
+			config.CacheLevel = "none"
+			time.Sleep(30 * time.Second)
 		}
 
 		runOpts := createRunOptions(config)
