@@ -90,6 +90,15 @@ func run() int {
 				logger.Warnf("Failed to clear derived data: %s", err)
 				logger.Warnf("Derived data command output: %s", string(output))
 			}
+
+			// Generate project using tuist
+			tuistCmd := exec.Command("tuist", "generate", "--configuration", config.Configuration, "-p", "tuist")
+			logger.Infof("Generating project with tuist: %s", tuistCmd.String())
+			if output, err := tuistCmd.CombinedOutput(); err != nil {
+				logger.Warnf("Failed to generate project with tuist: %s", err)
+				logger.Warnf("Tuist command output: %s", string(output))
+			}
+
 			config.CacheLevel = "none"
 			time.Sleep(30 * time.Second)
 		}
