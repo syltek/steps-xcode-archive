@@ -90,6 +90,13 @@ func run() int {
 				logger.Warnf("Failed to clear derived data: %s", err)
 				logger.Warnf("Derived data command output: %s", string(output))
 			}
+			// Clear build state cache
+			cmd = exec.Command("rm", "-rf", filepath.Join(os.Getenv("HOME"), "Library/Developer/Xcode/BuildState/*"))
+			logger.Infof("Cleaning build state cache: %s", cmd.String())
+			if output, err := cmd.CombinedOutput(); err != nil {
+				logger.Warnf("Failed to clear build state cache: %s", err)
+				logger.Warnf("Build state cache command output: %s", string(output))
+			}
 
 			// Generate project using tuist
 			tuistCmd := exec.Command("tuist", "generate", "--configuration", config.Configuration, "-p", "tuist")
